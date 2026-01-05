@@ -1,0 +1,38 @@
+- name: Create myapp user
+  user:
+    name: myapp
+    system: yes
+
+- name: Create log directory for myapp
+  file:
+    path: /var/log/myapp
+    state: directory
+    owner: myapp
+    group: myapp
+    mode: '0755'
+
+- name: Download Filebeat deb
+  get_url:
+    url: https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-8.10.0-amd64.deb
+    dest: /tmp/filebeat.deb
+
+- name: Install Filebeat
+  apt:
+    deb: /tmp/filebeat.deb
+
+
+- name: Copy Filebeat config
+  template:
+    src: filebeat.yml.j2
+    dest: /etc/filebeat/filebeat.yml
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart filebeat
+
+- name: Enable Filebeat
+  service:
+    name: filebeat
+    state: started
+    enabled: true
+

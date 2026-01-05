@@ -1,0 +1,26 @@
+- name: Create admin group
+  group:
+    name: admins
+    state: present
+
+- name: Create admin user
+  user:
+    name: admin
+    shell: /bin/bash
+    groups: admins
+    append: yes
+    create_home: yes
+    password: "{{ admin_password | password_hash('sha512') }}"
+
+- name: Create normal users
+  user:
+    name: user-1
+    shell: /bin/bash
+    create_home: yes
+    password: "{{ user1_password | password_hash('sha512') }}"
+- name: Create normal users
+  user:
+    name: user-2
+    shell: /bin/bash
+    create_home: yes
+    password: "{{ user1_password | password_hash('sha512') }}"

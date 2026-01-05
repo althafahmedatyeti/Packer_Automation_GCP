@@ -1,0 +1,23 @@
+# -------------------------------
+# SUDO HARDENING
+# -------------------------------
+
+- name: Explicitly deny sudo for sudo group
+  copy:
+    dest: /etc/sudoers.d/00-disable-sudo-group
+    owner: root
+    group: root
+    mode: '0440'
+    content: |
+      %{{ sudo_group }} ALL=(ALL) !ALL
+  notify: validate sudoers
+
+- name: Allow sudo only for admin group
+  copy:
+    dest: /etc/sudoers.d/10-admins-sudo
+    owner: root
+    group: root
+    mode: '0440'
+    content: |
+      %{{ admin_group }} ALL=(ALL) ALL
+  notify: validate sudoers

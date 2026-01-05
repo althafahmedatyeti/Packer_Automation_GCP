@@ -1,0 +1,12 @@
+- name: Provision base image
+  hosts: all
+  become: yes
+  gather_facts: false
+  roles:
+    - common
+    - users
+    - monitoring-agent
+    - logging-agent
+    - sudo_hardening
+    - hardening
+

@@ -1,0 +1,29 @@
+- meta: flush_handlers
+
+- name: Reload SSH
+  service:
+    name: ssh
+    state: reloaded
+
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+
+- name: Validate sudoers
+  command: visudo -cf /etc/sudoers
+
+- name: Lock ubuntu user
+  user:
+    name: ubuntu
+    password_lock: yes
