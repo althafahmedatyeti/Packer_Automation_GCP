@@ -11,9 +11,21 @@ packer {
   }
 }
 
-locals {
- admin_password = vault("/secret/data/packer/ansible", "admin_password")
- user1_password = vault("/secret/data/packer/ansible", "user1_password")
+#locals {
+ #admin_password = vault("/secret/data/packer/ansible", "admin_password")
+ #user1_password = vault("/secret/data/packer/ansible", "user1_password")
+#}
+########################
+# VARIABLES (from env)
+########################
+variable "admin_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "user1_password" {
+  type      = string
+  sensitive = true
 }
 source "googlecompute" "ubuntu" {
   project_id   = "packer-automation-483407"
@@ -29,7 +41,7 @@ source "googlecompute" "ubuntu" {
 
   ssh_username = "packer"
   
-  credentials_file = "/home/althaf4321/packer-sa-key.json"
+  #credentials_file = "/home/althaf4321/packer-sa-key.json"
 
 }
 
@@ -45,19 +57,18 @@ build {
       "sudo chmod 777 /tmp/.ansible"
     ]
   }
-
   provisioner "ansible" {
     playbook_file = "${path.root}/ansible/playbook.yml"
-    use_proxy = false
+    use_proxy     = false
 
     extra_arguments = [
       "--become",
       "-e", "ansible_python_interpreter=/usr/bin/python3",
       "-e", "ansible_remote_tmp=/tmp/.ansible",
-      
-        "-e", "admin_password=${local.admin_password}",
-      "-e", "user1_password=${local.user1_password}"
+      "-e", "admin_password=${var.admin_password}",
+      "-e", "user1_password=${var.user1_password}"
     ]
   }
 }
+
 
