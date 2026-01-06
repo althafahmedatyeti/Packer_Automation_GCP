@@ -14,17 +14,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # -----------------------------
+      # Checkout code
+      # -----------------------------
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       # -----------------------------
-      # Install dependencies
+      # Install dependencies: Packer + Vault
       # -----------------------------
       - name: Install Packer & Vault
         run: |
           sudo apt-get update
           sudo apt-get install -y curl unzip gnupg lsb-release
 
+          # Add HashiCorp repo
           curl -fsSL https://apt.releases.hashicorp.com/gpg \
             | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
 
@@ -40,10 +44,15 @@ jobs:
       # -----------------------------
       - name: Start Vault Dev Server
         run: |
-          vault secrets enable -path=secret kv-v2 || true
           vault server -dev -dev-root-token-id=root > vault.log 2>&1 &
-          sleep 5
+          echo "Waiting for Vault to be ready..."
+          for i in {1..10}; do
+            vault status && break
+            echo "Vault not ready, waiting 2s..."
+            sleep 2
+          done
 
+          # Export env vars for Vault CLI & Packer
           echo "VAULT_ADDR=http://127.0.0.1:8200" >> $GITHUB_ENV
           echo "VAULT_TOKEN=root" >> $GITHUB_ENV
 
@@ -52,13 +61,20 @@ jobs:
       # -----------------------------
       - name: Configure Vault Secrets
         run: |
+          # Enable KV v2 secrets engine if not already
           vault secrets enable -path=secret kv-v2 || true
 
+          # Write secrets from GitHub Secrets
           vault kv put secret/packer/ansible \
-          admin_password="${{ secrets.ADMIN_PASSWORD }}" \
-          user1_password="${{ secrets.USER1_PASSWORD }}"
+            admin_password="${{ secrets.ADMIN_PASSWORD }}" \
+            user1_password="${{ secrets.USER1_PASSWORD }}"
 
-          vault kv get secret/packer/ansible
+          # Ensure secrets are available
+          for i in {1..5}; do
+            vault kv get secret/packer/ansible && break
+            echo "Waiting for secret to be ready..."
+            sleep 2
+          done
 
       # -----------------------------
       # Create GCP Service Account key
@@ -83,12 +99,16 @@ jobs:
           packer validate packer_template_gcp/gcp-ubuntu.pkr.hcl
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: root
 
       # -----------------------------
-      # Packer Build
+      # Packer Build (Create GCP Image)
       # -----------------------------
-      - name: Packer Build (GCP Image)
+      - name: Packer Build
         run: |
           packer build packer_template_gcp/gcp-ubuntu.pkr.hcl
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: root
