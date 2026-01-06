@@ -12,8 +12,8 @@ packer {
 }
 
 locals {
- admin_password = vault("/secret/data/packer/ansible", "admin_password")
- user1_password = vault("/secret/data/packer/ansible", "user1_password")
+ admin_password = vault("/secret/packer/ansible", "admin_password")
+ user1_password = vault("/secret/packer/ansible", "user1_password")
 }
 source "googlecompute" "ubuntu" {
   project_id   = "packer-automation-483407"
