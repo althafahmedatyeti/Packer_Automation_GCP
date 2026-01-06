@@ -3,10 +3,10 @@ name: Packer GCP + Vault Test
 on:
   push:
     branches:
-      - feature/packer-gcp-setup
+      - main
   pull_request:
     branches:
-      - feature/packer-gcp-setup
+      - main
   workflow_dispatch:
 
 jobs:
