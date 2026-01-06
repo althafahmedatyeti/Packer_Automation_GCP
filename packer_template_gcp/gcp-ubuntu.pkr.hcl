@@ -11,21 +11,9 @@ packer {
   }
 }
 
-#locals {
- #admin_password = vault("/secret/data/packer/ansible", "admin_password")
- #user1_password = vault("/secret/data/packer/ansible", "user1_password")
-#}
-########################
-# VARIABLES (from env)
-########################
-variable "admin_password" {
-  type      = string
-  sensitive = true
-}
-
-variable "user1_password" {
-  type      = string
-  sensitive = true
+locals {
+ admin_password = vault("/secret/data/packer/ansible", "admin_password")
+ user1_password = vault("/secret/data/packer/ansible", "user1_password")
 }
 source "googlecompute" "ubuntu" {
   project_id   = "packer-automation-483407"
@@ -65,8 +53,8 @@ build {
       "--become",
       "-e", "ansible_python_interpreter=/usr/bin/python3",
       "-e", "ansible_remote_tmp=/tmp/.ansible",
-      "-e", "admin_password=${var.admin_password}",
-      "-e", "user1_password=${var.user1_password}"
+      "-e", "admin_password=${local.admin_password}",
+      "-e", "user1_password=${local.user1_password}"
     ]
   }
 }
