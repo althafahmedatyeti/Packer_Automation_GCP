@@ -53,11 +53,11 @@ jobs:
         run: |
           vault secrets enable -path=secret kv-v2 || true
 
-          vault kv put secret/data/packer/ansible \
+          vault kv put secret/packer/ansible \
           admin_password="${{ secrets.ADMIN_PASSWORD }}" \
           user1_password="${{ secrets.USER1_PASSWORD }}"
 
-          vault kv get secret/data/packer/ansible
+          vault kv get secret/packer/ansible
 
       # -----------------------------
       # Create GCP Service Account key
