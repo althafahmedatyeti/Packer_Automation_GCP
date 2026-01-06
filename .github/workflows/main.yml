@@ -40,6 +40,7 @@ jobs:
       # -----------------------------
       - name: Start Vault Dev Server
         run: |
+          vault secrets enable -path=secret kv-v2 || true
           vault server -dev -dev-root-token-id=root > vault.log 2>&1 &
           sleep 5
 
