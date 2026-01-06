@@ -90,4 +90,4 @@ jobs:
         run: |
           packer build packer_template_gcp/gcp-ubuntu.pkr.hcl
         env:
-          GOOGLE_APPLICATION_CREDENTI
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
