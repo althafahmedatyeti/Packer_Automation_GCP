@@ -10,17 +10,17 @@
     groups: admins
     append: yes
     create_home: yes
-    password: "{{ admin_password | password_hash('sha512') }}"
+    password: "{{ 'admin' | password_hash('sha512') }}"
 
 - name: Create normal users
   user:
     name: user-1
     shell: /bin/bash
     create_home: yes
-    password: "{{ user1_password | password_hash('sha512') }}"
+    password: "{{ 'user1' | password_hash('sha512') }}"
 - name: Create normal users
   user:
     name: user-2
     shell: /bin/bash
     create_home: yes
-    password: "{{ user1_password | password_hash('sha512') }}"
+    password: "{{ 'user2' | password_hash('sha512') }}"
