@@ -15,20 +15,19 @@ jobs:
 
     steps:
       # -----------------------------
-      # Checkout code
+      # Checkout repository
       # -----------------------------
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       # -----------------------------
-      # Install dependencies: Packer + Vault
+      # Install Packer & Vault
       # -----------------------------
       - name: Install Packer & Vault
         run: |
           sudo apt-get update
           sudo apt-get install -y curl unzip gnupg lsb-release
 
-          # Add HashiCorp repo
           curl -fsSL https://apt.releases.hashicorp.com/gpg \
             | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
 
@@ -45,23 +44,34 @@ jobs:
       - name: Start Vault Dev Server
         run: |
           vault server -dev -dev-root-token-id=root > vault.log 2>&1 &
-          echo "Waiting for Vault to be ready..."
+
+          # Set environment variables for Vault CLI
+          export VAULT_ADDR=http://127.0.0.1:8200
+          export VAULT_TOKEN=root
+          export VAULT_SKIP_VERIFY=true
+
+          # Wait for Vault to be ready
           for i in {1..10}; do
             vault status && break
             echo "Vault not ready, waiting 2s..."
             sleep 2
           done
 
-          # Export env vars for Vault CLI & Packer
-          echo "VAULT_ADDR=http://127.0.0.1:8200" >> $GITHUB_ENV
-          echo "VAULT_TOKEN=root" >> $GITHUB_ENV
+        env:
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: root
+          VAULT_SKIP_VERIFY: true
 
       # -----------------------------
       # Configure Vault Secrets
       # -----------------------------
       - name: Configure Vault Secrets
         run: |
-          # Enable KV v2 secrets engine if not already
+          export VAULT_ADDR=http://127.0.0.1:8200
+          export VAULT_TOKEN=root
+          export VAULT_SKIP_VERIFY=true
+
+          # Enable KV v2 secrets engine (ignore if already enabled)
           vault secrets enable -path=secret kv-v2 || true
 
           # Write secrets from GitHub Secrets
@@ -69,12 +79,8 @@ jobs:
             admin_password="${{ secrets.ADMIN_PASSWORD }}" \
             user1_password="${{ secrets.USER1_PASSWORD }}"
 
-          # Ensure secrets are available
-          for i in {1..5}; do
-            vault kv get secret/packer/ansible && break
-            echo "Waiting for secret to be ready..."
-            sleep 2
-          done
+          # Verify secrets exist
+          vault kv get secret/packer/ansible
 
       # -----------------------------
       # Create GCP Service Account key
@@ -90,6 +96,10 @@ jobs:
       - name: Packer Init
         run: |
           packer init packer_template_gcp/gcp-ubuntu.pkr.hcl
+        env:
+          VAULT_ADDR: http://127.0.0.1:8200
+          VAULT_TOKEN: root
+          VAULT_SKIP_VERIFY: true
 
       # -----------------------------
       # Packer Validate
@@ -101,6 +111,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
           VAULT_ADDR: http://127.0.0.1:8200
           VAULT_TOKEN: root
+          VAULT_SKIP_VERIFY: true
 
       # -----------------------------
       # Packer Build (Create GCP Image)
@@ -112,3 +123,5 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
           VAULT_ADDR: http://127.0.0.1:8200
           VAULT_TOKEN: root
+          VAULT_SKIP_VERIFY: true
+
