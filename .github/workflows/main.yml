@@ -8,6 +8,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   packer-build:
     runs-on: ubuntu-latest
@@ -26,7 +27,7 @@ jobs:
       - name: Install Packer & Vault
         run: |
           sudo apt-get update
-          sudo apt-get install -y curl unzip gnupg lsb-release
+          sudo apt-get install -y curl unzip gnupg lsb-release jq
 
           curl -fsSL https://apt.releases.hashicorp.com/gpg \
             | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -36,7 +37,7 @@ jobs:
           | sudo tee /etc/apt/sources.list.d/hashicorp.list
 
           sudo apt-get update
-          sudo apt-get install -y packer vault jq
+          sudo apt-get install -y packer vault
 
       # -----------------------------
       # Start Vault Dev Server
@@ -45,11 +46,10 @@ jobs:
         run: |
           vault server -dev -dev-root-token-id=root > vault.log 2>&1 &
           sleep 5
-
           vault status
 
       # -----------------------------
-      # Configure Vault Secrets (KV v2)
+      # Configure Vault Secrets
       # -----------------------------
       - name: Configure Vault Secrets
         run: |
@@ -59,7 +59,20 @@ jobs:
             admin_password="${{ secrets.ADMIN_PASSWORD }}" \
             user1_password="${{ secrets.USER1_PASSWORD }}"
 
-          vault kv get secret/packer/ansible
+      # -----------------------------
+      # Read Vault Secrets → Packer vars
+      # -----------------------------
+      - name: Create Packer vars from Vault
+        run: |
+          ADMIN_PASSWORD=$(vault kv get -field=admin_password secret/packer/ansible)
+          USER1_PASSWORD=$(vault kv get -field=user1_password secret/packer/ansible)
+
+          cat <<EOF > packer_template_gcp/secrets.auto.pkrvars.hcl
+          admin_password = "${ADMIN_PASSWORD}"
+          user1_password = "${USER1_PASSWORD}"
+          EOF
+
+          chmod 600 packer_template_gcp/secrets.auto.pkrvars.hcl
 
       # -----------------------------
       # Create GCP credentials file
@@ -73,7 +86,7 @@ jobs:
       # Packer Init
       # -----------------------------
       - name: Packer Init
-        run: packer init packer_template_gcp/gcp-ubuntu.pkr.hcl
+        run: packer init packer_template_gcp
 
       # -----------------------------
       # Packer Validate
@@ -81,7 +94,7 @@ jobs:
       - name: Packer Validate
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
-        run: packer validate packer_template_gcp/gcp-ubuntu.pkr.hcl
+        run: packer validate packer_template_gcp
 
       # -----------------------------
       # Packer Build
@@ -89,5 +102,5 @@ jobs:
       - name: Packer Build
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
-        run: packer build packer_template_gcp/gcp-ubuntu.pkr.hcl
+        run: packer build packer_template_gcp
 
