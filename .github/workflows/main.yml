@@ -18,6 +18,9 @@ jobs:
       VAULT_TOKEN: root
 
     steps:
+      # -----------------------------
+      # Checkout Code
+      # -----------------------------
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -39,6 +42,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y packer vault
 
+          packer --version
+          vault --version
+
       # -----------------------------
       # Start Vault Dev Server
       # -----------------------------
@@ -46,21 +52,52 @@ jobs:
         run: |
           vault server -dev -dev-root-token-id=root > vault.log 2>&1 &
           sleep 5
+
+      # -----------------------------
+      # Validate Vault is Running
+      # -----------------------------
+      - name: Validate Vault status
+        run: |
           vault status
+
+      # -----------------------------
+      # Validate KV Engine
+      # -----------------------------
+      - name: Validate Vault KV engine
+        run: |
+          vault secrets list | grep -q '^secret/' \
+            && echo "Vault KV engine is enabled" \
+            || (echo "Vault KV engine missing" && exit 1)
 
       # -----------------------------
       # Configure Vault Secrets
       # -----------------------------
       - name: Configure Vault Secrets
         run: |
-          vault secrets enable -path=secret kv-v2 || true
-
           vault kv put secret/packer/ansible \
             admin_password="${{ secrets.ADMIN_PASSWORD }}" \
             user1_password="${{ secrets.USER1_PASSWORD }}"
 
       # -----------------------------
-      # Read Vault Secrets → Packer vars
+      # Validate Secrets Exist
+      # -----------------------------
+      - name: Validate secrets exist in Vault
+        run: |
+          vault kv get secret/packer/ansible > /dev/null \
+            && echo "Secrets exist in Vault" \
+            || (echo "Secrets missing in Vault" && exit 1)
+
+      # -----------------------------
+      # Validate Secret Fields
+      # -----------------------------
+      - name: Validate secret fields
+        run: |
+          vault kv get -field=admin_password secret/packer/ansible > /dev/null
+          vault kv get -field=user1_password secret/packer/ansible > /dev/null
+          echo "Secret fields are accessible"
+
+      # -----------------------------
+      # Create Packer vars from Vault
       # -----------------------------
       - name: Create Packer vars from Vault
         run: |
@@ -75,12 +112,30 @@ jobs:
           chmod 600 packer_template_gcp/secrets.auto.pkrvars.hcl
 
       # -----------------------------
+      # Validate Packer vars file
+      # -----------------------------
+      - name: Validate Packer vars file
+        run: |
+          test -f packer_template_gcp/secrets.auto.pkrvars.hcl \
+            && echo "Packer vars file exists" \
+            || (echo "Packer vars file missing" && exit 1)
+
+      # -----------------------------
       # Create GCP credentials file
       # -----------------------------
       - name: Create GCP credentials
         run: |
           echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
           chmod 600 gcp-key.json
+
+      # -----------------------------
+      # Validate GCP credentials file
+      # -----------------------------
+      - name: Validate GCP credentials
+        run: |
+          test -f gcp-key.json \
+            && echo "GCP credentials file exists" \
+            || (echo "GCP credentials missing" && exit 1)
 
       # -----------------------------
       # Packer Init
@@ -103,4 +158,3 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
         run: packer build packer_template_gcp
-
