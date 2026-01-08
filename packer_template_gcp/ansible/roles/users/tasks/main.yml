@@ -2,7 +2,11 @@
   group:
     name: admins
     state: present
-
+- name: Install passlib dependency
+  apt:
+    name: python3-passlib
+    state: present
+    update_cache: yes
 - name: Create admin user
   user:
     name: admin
@@ -10,7 +14,7 @@
     groups: admins
     append: yes
     create_home: yes
-    password: "{{ admin_password  | password_hash('sha512') }}"
+    password: "{{ admin_password  | password_hash('sha512') }}"    
 
 - name: Create normal users
   user:
