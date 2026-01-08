@@ -13,6 +13,10 @@ jobs:
   packer-build:
     runs-on: ubuntu-latest
 
+    outputs:
+      image_name: ${{ steps.packer.outputs.image_name }}
+
+
     env:
       VAULT_ADDR: http://127.0.0.1:8200
       VAULT_TOKEN: root
@@ -168,3 +172,55 @@ jobs:
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
         run: packer build packer_template_gcp
+
+
+
+      - name: Packer Build and capture image name
+        id: packer
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+        run: |
+          packer build packer_template_gcp | tee packer.log
+
+          IMAGE_NAME=$(grep -oP 'A disk image was created:\s*\K.*' packer.log)
+
+          echo "IMAGE_NAME=$IMAGE_NAME"
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+# 
+# instance creating using the terraform
+
+  terraform-deploy:
+    name: Terraform Deploy VM
+    runs-on: ubuntu-latest
+    needs: packer-build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y terraform
+
+      - name: Create GCP credentials
+        run: |
+          echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
+          chmod 600 gcp-key.json
+
+      - name: Terraform Init
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+        run: |
+          cd terraform-gcp
+          terraform init
+
+      - name: Terraform Apply
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+        run: |
+          cd terraform-gcp
+          terraform apply \
+            -var="image_name=${{ needs.packer-build.outputs.image_name }}" \
+            -auto-approve
