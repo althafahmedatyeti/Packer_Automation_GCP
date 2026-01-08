@@ -1,3 +1,46 @@
+packer {
+  required_plugins {
+    googlecompute = {
+      source  = "github.com/hashicorp/googlecompute"
+      version = "~> 1"
+    }
+    ansible = {
+      source  = "github.com/hashicorp/ansible"
+      version = "~> 1"
+    }
+  }
+} 
+# Variables populated by secrets.auto.pkrvars.hcl file
+variable "admin_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "user1_password" {
+  type      = string
+  sensitive = true
+}
+
+source "googlecompute" "ubuntu" {
+  project_id = "packer-automation-483407"
+  zone       = "us-central1-a"
+
+  image_name   = "packer-ubuntu-hardened-{{timestamp}}"
+  image_family = "packer-ubuntu-hardened"
+
+  machine_type = "e2-micro"
+
+  source_image_family     = "ubuntu-2204-lts"
+  source_image_project_id = ["ubuntu-os-cloud"]
+
+  ssh_username = "packer"
+
+  # Credentials picked from GOOGLE_APPLICATION_CREDENTIALS
+}
+
+build {
+  sources = ["source.googlecompute.ubuntu"]
+
 # ---------------------------------
 # Production-safe APT handling (Packer)
 # ---------------------------------
@@ -40,4 +83,4 @@ provisioner "shell" {
     "chmod 777 /tmp/.ansible"
   ]
 }
-
+}
