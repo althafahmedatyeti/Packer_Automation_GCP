@@ -73,7 +73,6 @@ build {
       "sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y python3",
       "sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y python3-apt python3-passlib ", 
       "sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a python3 --version",
-      "sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a pip show passlib",
       # Prepare Ansible temp directory
       "sudo mkdir -p /tmp/.ansible",
       "sudo chmod 777 /tmp/.ansible"
