@@ -46,14 +46,10 @@ build {
     inline = [
       "set -eu",
 
-      # Non-interactive mode
-      "sudo export DEBIAN_FRONTEND=noninteractive || true",
-      "sudo export NEEDRESTART_MODE=a || true",
-
       # Wait for cloud-init
       "sudo cloud-init status --wait",
 
-      # Stop and disable background apt jobs (ROOT REQUIRED)
+      # Disable background apt services safely
       "sudo systemctl stop apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
       "sudo systemctl disable apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
       "sudo systemctl mask apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
@@ -67,14 +63,14 @@ build {
       "while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done",
       "while sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 5; done",
 
-      # Recover apt state (ROOT REQUIRED)
+      # Recover apt state
       "sudo rm -rf /var/lib/apt/lists/partial/*",
       "sudo apt-get clean",
       "sudo dpkg --configure -a",
 
-      # Update and install packages
-      "sudo apt-get update -y",
-      "sudo apt-get install -y python3 python3-apt python3-passlib",
+      # Update and install packages (NON-INTERACTIVE)
+      "sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get update -y",
+      "sudo DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get install -y python3 python3-apt python3-passlib",
 
       # Prepare Ansible temp directory
       "sudo mkdir -p /tmp/.ansible",
@@ -82,3 +78,4 @@ build {
     ]
   }
 }
+
