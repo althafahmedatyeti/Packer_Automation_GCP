@@ -55,7 +55,7 @@ build {
 # ---------------------------------
 provisioner "shell" {
   inline = [
-    inline_shebang = "/bin/bash -euxo pipefail"
+    inline_shebang = "/bin/bash -euxo pipefail",
 
     # Wait for VM initialization
     "sudo cloud-init status --wait",
