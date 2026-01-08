@@ -1,5 +1,5 @@
 provider "google" {
-  project = "my-gcp-project-id"
+  project = "packer-automation-483407"
   region  = "asia-south1"
   zone    = "asia-south1-a"
 }
