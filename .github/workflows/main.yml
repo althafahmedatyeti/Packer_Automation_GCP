@@ -169,16 +169,23 @@ jobs:
       # -----------------------------
       # Packer Build
       # -----------------------------
-      - name: Packer Build
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
-        run:
-          packer build packer_template_gcp | tee packer.log
+      - name: Packer Build and capture image name
+  id: packer
+  env:
+    GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+  run: |
+    packer build packer_template_gcp | tee packer.log
 
-          IMAGE_NAME=$(grep -oP 'A disk image was created:\s*\K.*' packer.log)
+    IMAGE_NAME=$(grep -oP "project: \Kpacker-[^ ]+" packer.log | tail -1)
 
-          echo "IMAGE_NAME=$IMAGE_NAME"
-          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+    if [ -z "$IMAGE_NAME" ]; then
+      echo "❌ Failed to extract image name"
+      exit 1
+    fi
+
+    echo "✅ Image name: $IMAGE_NAME"
+    echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
 
 # 
 # instance creating using the terraform
