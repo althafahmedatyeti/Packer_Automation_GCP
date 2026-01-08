@@ -77,5 +77,20 @@ build {
       "sudo chmod 777 /tmp/.ansible"
     ]
   }
+  provisioner "ansible" {
+    playbook_file = "${path.root}/ansible/playbook.yml"
+    use_proxy     = false
+
+    extra_arguments = [
+      "--become",
+      "--extra-vars",
+      jsonencode({
+        admin_password = var.admin_password
+        user1_password = var.user1_password
+      }),
+      "-e", "ansible_python_interpreter=/usr/bin/python3",
+      "-e", "ansible_remote_tmp=/tmp/.ansible"
+    ]
+  }
 }
 
