@@ -55,10 +55,9 @@ build {
 # ---------------------------------
 provisioner "shell" {
   inline = [
-    inline_shebang = "/bin/bash -euxo pipefail",
+    "set -eu", 
 
-    # Wait for VM initialization
-    "sudo cloud-init status --wait",
+    "cloud-init status --wait",
 
     # Stop and permanently disable background apt jobs
     "sudo systemctl stop apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
