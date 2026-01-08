@@ -1,12 +1,17 @@
+- name: Install pip
+  apt:
+    name: python3-pip
+    state: present
+
+- name: Install passlib via pip
+  pip:
+    name: passlib
+
 - name: Create admin group
   group:
     name: admins
     state: present
-- name: Install passlib dependency
-  apt:
-    name: python3-passlib
-    state: present
-    update_cache: yes
+
 - name: Create admin user
   user:
     name: admin
