@@ -39,48 +39,46 @@ source "googlecompute" "ubuntu" {
 }
 
 build {
+  name    = "gcp-ubuntu-image"
   sources = ["source.googlecompute.ubuntu"]
 
-# ---------------------------------
-# Production-safe APT handling (Packer)
-# ---------------------------------
-provisioner "shell" {
-  inline = [
-    # Fail fast, POSIX-safe
-    "set -eu",
+  provisioner "shell" {
+    inline = [
+      "set -eu",
 
-    # Non-interactive installs
-    "export DEBIAN_FRONTEND=noninteractive",
-    "export NEEDRESTART_MODE=a",
+      # Non-interactive mode
+      "sudo export DEBIAN_FRONTEND=noninteractive || true",
+      "sudo export NEEDRESTART_MODE=a || true",
 
-    # Wait for VM initialization
-    "cloud-init status --wait",
+      # Wait for cloud-init
+      "sudo cloud-init status --wait",
 
-    # Stop and disable background apt jobs
-    "systemctl stop apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
-    "systemctl disable apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
-    "systemctl mask apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
-    "systemctl stop apt-daily.timer apt-daily-upgrade.timer || true",
-    "systemctl disable apt-daily.timer apt-daily-upgrade.timer || true",
-    "systemctl mask apt-daily.timer apt-daily-upgrade.timer || true",
+      # Stop and disable background apt jobs (ROOT REQUIRED)
+      "sudo systemctl stop apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
+      "sudo systemctl disable apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
+      "sudo systemctl mask apt-daily.service apt-daily-upgrade.service unattended-upgrades || true",
 
-    # Wait until apt / dpkg locks are released
-    "while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done",
-    "while fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done",
-    "while fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 5; done",
+      "sudo systemctl stop apt-daily.timer apt-daily-upgrade.timer || true",
+      "sudo systemctl disable apt-daily.timer apt-daily-upgrade.timer || true",
+      "sudo systemctl mask apt-daily.timer apt-daily-upgrade.timer || true",
 
-    # Recover apt state safely
-    "rm -rf /var/lib/apt/lists/partial/*",
-    "apt-get clean",
-    "dpkg --configure -a",
+      # Wait for apt locks
+      "while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done",
+      "while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1; do sleep 5; done",
+      "while sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1; do sleep 5; done",
 
-    # Update and install required packages
-    "apt-get update -y",
-    "apt-get install -y python3 python3-apt python3-passlib",
+      # Recover apt state (ROOT REQUIRED)
+      "sudo rm -rf /var/lib/apt/lists/partial/*",
+      "sudo apt-get clean",
+      "sudo dpkg --configure -a",
 
-    # Prepare Ansible temp directory
-    "mkdir -p /tmp/.ansible",
-    "chmod 777 /tmp/.ansible"
-  ]
-}
+      # Update and install packages
+      "sudo apt-get update -y",
+      "sudo apt-get install -y python3 python3-apt python3-passlib",
+
+      # Prepare Ansible temp directory
+      "sudo mkdir -p /tmp/.ansible",
+      "sudo chmod 777 /tmp/.ansible"
+    ]
+  }
 }
