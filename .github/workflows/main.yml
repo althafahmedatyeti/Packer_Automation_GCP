@@ -274,8 +274,8 @@ jobs:
       # -----------------------------
       - name: Wait for 30 minutes before destroy
         run: |
-          echo "⏳ Waiting for 30 minutes before destroying resources..."
-          sleep 1800
+          echo "⏳ Waiting for 5 minutes before destroying resources..."
+          sleep 300
 
       # -----------------------------
       # Terraform Destroy
