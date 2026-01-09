@@ -14,3 +14,5 @@ resource "google_compute_instance" "packer_vm" {
     access_config {}
   }
 }
+
+
