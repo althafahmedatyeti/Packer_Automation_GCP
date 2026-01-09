@@ -1,18 +1,9 @@
-resource "google_compute_instance" "packer_vm" {
-  name         = "packer-vm-from-ci-0111"
-  machine_type = "e2-medium"
-  zone         = "asia-south1-a"
+module "packer_vm" {
+  source = "./modules/compute_instance"
 
-  boot_disk {
-    initialize_params {
-      image = "projects/${var.project_id}/global/images/${var.image_name}"
-    }
-  }
-
-  network_interface {
-    network = "default"
-    access_config {}
-  }
+  vm_name       = var.vm_name
+  machine_type  = var.machine_type
+  zone          = var.zone
+  project_id    = var.project_id
+  image_name    = var.image_name
 }
-
-
