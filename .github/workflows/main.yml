@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/sai-1
   pull_request:
     branches:
       - main
@@ -12,6 +13,10 @@ on:
 jobs:
   packer-build:
     runs-on: ubuntu-latest
+
+    outputs:
+      image_name: ${{ steps.packer.outputs.image_name }}
+
 
     env:
       VAULT_ADDR: http://127.0.0.1:8200
@@ -164,7 +169,71 @@ jobs:
       # -----------------------------
       # Packer Build
       # -----------------------------
-      - name: Packer Build
+      - name: Packer Build and capture image name
+        id: packer
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
-        run: packer build packer_template_gcp
+        run: |
+          packer build packer_template_gcp | tee packer.log
+
+          IMAGE_NAME=$(grep -oP "project: \Kpacker-[^ ]+" packer.log | tail -1)
+
+          if [ -z "$IMAGE_NAME" ]; then
+            echo "❌ Failed to extract image name"
+            exit 1
+          fi
+
+          echo "✅ Image name: $IMAGE_NAME"
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+
+
+# 
+# instance creating using the terraform
+
+  terraform-deploy:
+    name: Terraform Deploy VM
+    runs-on: ubuntu-latest
+    needs: packer-build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl gnupg software-properties-common
+
+          curl -fsSL https://apt.releases.hashicorp.com/gpg \
+            | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+          https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+          | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+          sudo apt-get update
+          sudo apt-get install -y terraform
+
+          terraform --version
+
+
+      - name: Create GCP credentials
+        run: |
+          echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
+          chmod 600 gcp-key.json
+
+      - name: Terraform Init
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+        run: |
+          cd terraform-gcp
+          terraform init
+
+      - name: Terraform Apply
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+        run: |
+          cd terraform-gcp
+          terraform apply \
+            -var="image_name=${{ needs.packer-build.outputs.image_name }}" \
+            -auto-approve
