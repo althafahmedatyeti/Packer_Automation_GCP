@@ -1,5 +1,5 @@
 resource "google_compute_instance" "packer_vm" {
-  name         = "packer-vm-from-ci"
+  name         = "packer-vm-from-ci-0111"
   machine_type = "e2-medium"
   zone         = "asia-south1-a"
 
