@@ -5,7 +5,7 @@ resource "google_compute_instance" "packer_vm" {
 
   boot_disk {
     initialize_params {
-      image = "projects/my-gcp-project-id/global/images/${var.image_name}"
+      image = "projects/${var.project_id}/global/images/${var.image_name}"
     }
   }
 
