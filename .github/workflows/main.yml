@@ -237,3 +237,56 @@ jobs:
           terraform apply \
             -var="image_name=${{ needs.packer-build.outputs.image_name }}" \
             -auto-approve
+
+# terraform destroy after 30 mins
+
+  terraform-destroy-after-30min:
+    name: Terraform Destroy After 30 Minutes
+    runs-on: ubuntu-latest
+    needs: terraform-deploy
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Terraform
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl gnupg software-properties-common
+
+          curl -fsSL https://apt.releases.hashicorp.com/gpg \
+            | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+          echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+          https://apt.releases.hashicorp.com $(lsb_release -cs) main" \
+          | sudo tee /etc/apt/sources.list.d/hashicorp.list
+
+          sudo apt-get update
+          sudo apt-get install -y terraform
+
+      - name: Create GCP credentials
+        run: |
+          echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
+          chmod 600 gcp-key.json
+
+      # -----------------------------
+      # Wait for 30 minutes (CRON-LIKE)
+      # -----------------------------
+      - name: Wait for 30 minutes before destroy
+        run: |
+          echo "⏳ Waiting for 30 minutes before destroying resources..."
+          sleep 1800
+
+      # -----------------------------
+      # Terraform Destroy
+      # -----------------------------
+      - name: Terraform Destroy
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+        run: |
+          cd terraform-gcp
+          terraform init
+          terraform destroy \
+            -var="image_name=${{ needs.packer-build.outputs.image_name }}" \
+            -auto-approve
+ 
