@@ -278,7 +278,7 @@ jobs:
           sleep 300
 
       # -----------------------------
-      # Terraform Destroy
+      # Terraform Destroy the data 
       # -----------------------------
       - name: Terraform Destroy
         env:
