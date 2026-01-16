@@ -237,13 +237,13 @@ jobs:
           terraform apply \
             -var="image_name=${{ needs.packer-build.outputs.image_name }}" \
             -auto-approve
+#destroy the instance
 
-# terraform destroy after 30 mins
-
-  terraform-destroy-after-30min:
-    name: Terraform Destroy After 30 Minutes
+  terraform-destroy:
+    name: Terraform Destroy VM
     runs-on: ubuntu-latest
     needs: terraform-deploy
+    if: always()   # ensures destroy runs even if apply partially fails
 
     steps:
       - name: Checkout code
@@ -269,24 +269,18 @@ jobs:
           echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
           chmod 600 gcp-key.json
 
-      # -----------------------------
-      # Wait for 30 minutes (CRON-LIKE)
-      # -----------------------------
-      - name: Wait for 30 minutes before destroy
-        run: |
-          echo "⏳ Waiting for 5 minutes before destroying resources..."
-          sleep 300
-
-      # -----------------------------
-      # Terraform Destroy the data 
-      # -----------------------------
-      - name: Terraform Destroy
+      - name: Terraform Init (Remote Backend)
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
         run: |
           cd terraform-gcp
           terraform init
+
+      - name: Terraform Destroy
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
+        run: |
+          cd terraform-gcp
           terraform destroy \
             -var="image_name=${{ needs.packer-build.outputs.image_name }}" \
             -auto-approve
- 
