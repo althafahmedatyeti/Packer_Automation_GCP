@@ -279,4 +279,5 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
         run: |
           cd terraform-gcp
-          terraform destroy -auto-approve
+          terraform destroy -auto-approve \
+            -var="image_name=${{ needs.packer-build.outputs.image_name }}"
